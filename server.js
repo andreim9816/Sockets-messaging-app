@@ -1,16 +1,14 @@
 'use strict';
 
-let server = require('http').createServer();
-let io = require('socket.io')(server);
-const readline = require('readline').createInterface(
-    {
-        input: process.stdin,
-        output: process.stdout
-    }
-)
+const server = require('http').createServer();
+const io = require('socket.io')(server);
 const port = 3000;
 
-let socketsMap = new Map(); // mapare (nume -> socket)
+server.listen(port, () => {
+    console.log('Serverul a pornit pe portul: ' + port);
+});
+
+let socketsMap = new Map(); // mapare (nume -> Socket)
 
 io.on('connection', (socket) => {
     // la conectare, se afiseaza un mesaj corespunzator
@@ -47,30 +45,31 @@ io.on('connection', (socket) => {
         let inputArray = input.readLineInput.split(':');
         let mesaj = inputArray[1];
 
-        if(inputArray[0].trim() === 'broadcast') {
-            // pentru broadcast, se emite un astfel de eveniment
-            socket.broadcast.emit('serverToClientMessage', { socketExp: input.socketExp, mesaj : mesaj});
-        }
-        else {
-            // nu este aleasa optiunea de broadcast
-            if(socketsMap.has(inputArray[0].trim())) {
-                // daca destinatarul exista, se trimite mesajul
-                let socketDest = socketsMap.get(inputArray[0].trim());
-                socketDest.emit('serverToClientMessage', { socketExp: input.socketExp, mesaj : mesaj.trim()});
+        if(inputArray.length > 1) {
+            // format bun
+            if(inputArray[0].trim().length == 0 || mesaj.length == 0) {
+                socket.emit('wrongFormat', 'Numele destinatarului sau mesajul este vid');
+            } else if(inputArray[0].trim() === 'broadcast') {
+                // pentru broadcast, se emite un astfel de eveniment
+                socket.broadcast.emit('serverToClientMessage', {socketExp: input.socketExp, mesaj : mesaj});
+            } else {
+                // nu este aleasa optiunea de broadcast
+                if(socketsMap.has(inputArray[0].trim())) {
+                    // daca destinatarul exista, se trimite mesajul
+                    let socketDest = socketsMap.get(inputArray[0].trim());
+                    socketDest.emit('serverToClientMessage', { socketExp: input.socketExp, mesaj : mesaj.trim()});
+                }
+                else {
+                    // destinatarul nu exista, se trimite inapoi emitatorului un mesaj corespunzator
+                    socket.emit('wrongFormat', 'Clientul ' + inputArray[0].trim() + ' nu exista');
+                }
             }
-            else {
-                // destinatarul nu exista, se trimite inapoi emitatorului un mesaj corespunzator
-                socket.emit('destNotExists', inputArray[0].trim());
-            }
+        } else {
+            // format gresit al mesajului
+            socket.emit('wrongFormat', 'Format gresit');
         }
-
     })
 });
-
-server.listen(port, () => {
-    console.log('Serverul a pornit pe portul: ' + port);
-});
-
 
 function getSocketNameById(id) {
     // functie care primeste un socket si ii preia numele

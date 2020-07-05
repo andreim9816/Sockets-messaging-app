@@ -46,10 +46,10 @@ client.on('serverToClientMessage', (input) => {
   console.log(input.socketExp + ":" + input.mesaj);
 })
 
-client.on('destNotExists', (numeDest) => {
-    // clientul respectiv nu exista
-    console.log('Clientul ' + numeDest + ' nu exista');
-})
+// client.on('destNotExists', (numeDest) => {
+//     // clientul respectiv nu exista
+//     console.log('Clientul ' + numeDest + ' nu exista');
+// })
 
 client.on('broadcastAdded', (nume) => {
     // broadcast pentru toti clientii mai putin cel nou
@@ -61,6 +61,10 @@ client.on('newAdded', (nameList) => {
     if(nameList.length > 0)
         console.log("Numele celorlalti clienti este: " + nameList)
 })
+
+client.on('wrongFormat', (mesaj) => {
+    console.log(mesaj);
+});
 
 client.on('disconnectClient', (nume) => {
     // clientul cu numele respectiv s-a deconectat
