@@ -14,6 +14,5 @@ Make use of the socket.io events to define each operation type. You can design t
 
 ## Dependencies
 
-`npm install express`  
 `npm install io.socket`  
 `npm install socket.io-client`   
