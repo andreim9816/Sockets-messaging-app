@@ -72,7 +72,7 @@ io.on('connection', (socket) => {
 });
 
 function getSocketNameById(id) {
-    // functie care primeste un socket si ii preia numele
+    // functie care primeste id-ul unui socket si returneaza numele
    for(let [key, value] of socketsMap.entries()) {
        if( value.id === id) {
            return key;
