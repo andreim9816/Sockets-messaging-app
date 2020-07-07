@@ -5,78 +5,78 @@ const io = require('socket.io')(server);
 const port = 3000;
 
 server.listen(port, () => {
-    console.log('Serverul a pornit pe portul: ' + port);
+    console.log('Server is running on port: ' + port);
 });
 
-let socketsMap = new Map(); // mapare (nume -> Socket)
+let socketsMap = new Map(); // mapping (name -> Socket)
 
 io.on('connection', (socket) => {
-    // la conectare, se afiseaza un mesaj corespunzator
-    console.log('Client conectat');
 
-    // se verifica daca numele este deja luat
-    socket.on('verificaNume', (nume) => {
-        
-        let added =  !socketsMap.has(nume);
-        socket.emit('adaugatNume', added);
+    //New client
+    console.log('New client connected');
 
-        if(added === true) {
-            /** in caz afirmativ, se trimite tuturor clientilor numele noului client
-             *  iar cel nou primeste o lista cu numele tuturor clientilor
-             */
-            socket.emit('newAdded', Array.from(socketsMap.keys()));
-            socket.broadcast.emit('broadcastAdded', nume);
-            socketsMap.set(nume, socket);
-        }
-    })
+    let socketName = "";
 
     socket.on('disconnect', () => {
-        //la deconectare, se afiseaza un mesaj corespunzator
-        console.log("Client deconectat!");
-        
-        // gaseste numele socketului deconectat, pentru restul se emite un eveniment de deconectare
-        let nume = getSocketNameById(socket.id);
-        socket.broadcast.emit('disconnectClient', nume);
-        socketsMap.delete(socket.nume);
-    })
+        // When disconnecting, a proper message is displayed
+        console.log('Client disconnected!');
 
+        socket.broadcast.emit('disconnectClient', socketName);
+        socketsMap.delete(socketName);
+    });
+
+    // Checks whether the client has already been registered
+    socket.on('verifyName', (name) => {
+
+        let added = !socketsMap.has(name);
+        // socket.emit('clientAdded', added);
+
+        if(added) {
+            /** If true, send a notification to all other clients
+             *  And the new one receives a list with the name of the others
+             */
+            socket.emit('clientAdded', added);
+            socket.emit('newAdded', Array.from(socketsMap.keys()));
+            socket.broadcast.emit('broadcastAdded', name);
+            socketsMap.set(name, socket);
+            socketName = name;
+        }
+        else {
+            // Client was not added => disconnect
+            socket.emit('clientNotAdded');
+            socket.disconnect(); // might work, still needs to close the readline from the client
+        }
+    });
+
+    // Server receives a message from the client and sends it forward to its destination
     socket.on('clientToServerMessage', (input) => {
-        // clientul transmite serverului destinatarul si mesajul
-        let inputArray = input.readLineInput.split(':');
-        let mesaj = inputArray[1];
+
+        let inputArray = input.split(':');
+        let message = inputArray[1];
 
         if(inputArray.length > 1) {
-            // format bun
-            if(inputArray[0].trim().length == 0 || mesaj.length == 0) {
-                socket.emit('wrongFormat', 'Numele destinatarului sau mesajul este vid');
+            // Good format. (not :message, clientDest:, or :)
+
+            if(inputArray[0].trim().length === 0 || message.length === 0) {
+                socket.emit('wrongFormat', 'Message or client should be filled in!');
             } else if(inputArray[0].trim() === 'broadcast') {
-                // pentru broadcast, se emite un astfel de eveniment
-                socket.broadcast.emit('serverToClientMessage', {socketExp: input.socketExp, mesaj : mesaj});
+                // Client chose the 'broadcast' option
+                socket.broadcast.emit('serverToClientMessage', {socketExp: socketName, message : message.trim()});
             } else {
-                // nu este aleasa optiunea de broadcast
+                // Client did not chose the 'broadcast' option
                 if(socketsMap.has(inputArray[0].trim())) {
-                    // daca destinatarul exista, se trimite mesajul
+                    // Checks if the receiver client exists
                     let socketDest = socketsMap.get(inputArray[0].trim());
-                    socketDest.emit('serverToClientMessage', { socketExp: input.socketExp, mesaj : mesaj.trim()});
+                    socketDest.emit('serverToClientMessage', { socketExp: socketName, message : message.trim()});
                 }
                 else {
-                    // destinatarul nu exista, se trimite inapoi emitatorului un mesaj corespunzator
-                    socket.emit('wrongFormat', 'Clientul ' + inputArray[0].trim() + ' nu exista');
+                    // Receiver does not exist, sends back a warning message
+                    socket.emit('wrongFormat', 'Client ' + inputArray[0].trim() + ' does not exist!');
                 }
             }
         } else {
-            // format gresit al mesajului
-            socket.emit('wrongFormat', 'Format gresit');
+            // Wrong format of the message
+            socket.emit('wrongFormat', 'Wrong format of the message!');
         }
-    })
+    });
 });
-
-function getSocketNameById(id) {
-    // functie care primeste id-ul unui socket si returneaza numele
-   for(let [key, value] of socketsMap.entries()) {
-       if( value.id === id) {
-           return key;
-       }
-   }
-   return false;
-}
