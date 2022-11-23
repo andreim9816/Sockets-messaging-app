@@ -6,7 +6,7 @@
   "dependencies": {
     "@hubgets/eslint-config-hubmodule": "^1.20200522.30852",
     "readline": "^1.3.0",
-    "socket.io": "^2.3.0",
+    "socket.io": "^2.5.0",
     "socket.io-client": "^2.3.0"
   },
   "devDependencies": {},
